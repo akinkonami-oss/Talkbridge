@@ -221,7 +221,7 @@ struct ContentView: View {
             Section("Translation") {
                 Toggle("Translate as I type", isOn: $autoTranslate)
                 LabeledContent("Languages", value: "English ↔ French")
-                Text("Online translation requires a secure service endpoint. Keep API credentials on the server.")
+                Text("Prototype translations use a public provider when no private endpoint is configured. Text you translate is sent to that provider; avoid sensitive content. A private HTTPS backend is recommended for production.")
                     .font(.footnote).foregroundStyle(.secondary)
             }
             Section {
