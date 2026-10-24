@@ -1,0 +1,39 @@
+name: iOS Build
+
+on:
+  push:
+    paths:
+      - "ios/**"
+      - ".github/workflows/ios-build.yml"
+  workflow_dispatch:
+
+jobs:
+  build-ios:
+    runs-on: macos-15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Generate Xcode project
+        working-directory: ios
+        run: xcodegen generate
+      - name: Build iOS Simulator app
+        working-directory: ios
+        run: xcodebuild -project TalkBridge.xcodeproj -scheme TalkBridge -sdk iphonesimulator -configuration Debug -destination 'generic/platform=iOS Simulator' -derivedDataPath build CODE_SIGNING_ALLOWED=NO build
+      - name: Package simulator build
+        if: success()
+        run: |
+          mkdir -p output
+          APP_PATH="ios/build/Build/Products/Debug-iphonesimulator/TalkBridge.app"
+          test -d "$APP_PATH"
+          ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" output/TalkBridge-iOS-Simulator.zip
+      - name: Upload simulator build
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TalkBridge-iOS-Simulator
+          path: output/TalkBridge-iOS-Simulator.zip
+          retention-days: 14
