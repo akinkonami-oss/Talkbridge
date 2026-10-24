@@ -133,7 +133,7 @@ private fun TalkBridgeApp() {
                                     Spacer(Modifier.height(7.dp))
                                     Text(message.translated, color = if (message.outgoing) Color.White.copy(alpha = .9f) else foreground.copy(alpha = .8f), fontSize = (13 * fontScale).sp)
                                 }
-                                Text(if (message.outgoing) "✓✓  Translated" else "Translated", fontSize = 10.sp, color = if (darkMode) Color.LightGray else Color.Gray, modifier = Modifier.padding(top = 4.dp, horizontal = 5.dp))
+                                Text(if (message.outgoing) "✓✓  Translated" else "Translated", fontSize = 10.sp, color = if (darkMode) Color.LightGray else Color.Gray, modifier = Modifier.padding(top = 4.dp, start = 5.dp, end = 5.dp))
                             }
                         }
                     }
