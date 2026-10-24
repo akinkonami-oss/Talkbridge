@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b1020"><meta name="description" content="TalkBridge — translate text and spoken English and French.">
+<link rel="manifest" href="./manifest.webmanifest"><link rel="icon" href="./icon.svg" type="image/svg+xml">
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="TalkBridge">
+<title>TalkBridge</title>
+<style>
+:root{color-scheme:dark;--bg:#0b1020;--panel:#141b2f;--line:#27324c;--text:#f5f7ff;--muted:#a9b3ca;--blue:#6c8cff;--mint:#62e6c5}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at top right,#202e54 0,transparent 45%),var(--bg);color:var(--text);font:16px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;min-height:100vh;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+header{padding:22px 20px 12px;max-width:760px;margin:auto} .brand{display:flex;align-items:center;gap:12px}.logo{width:44px;height:44px;border-radius:15px;background:linear-gradient(135deg,var(--blue),#9a70ff);display:grid;place-items:center;font-size:23px;font-weight:800}.eyebrow{color:var(--mint);text-transform:uppercase;letter-spacing:.15em;font-size:11px;font-weight:800}h1{font-size:25px;margin:2px 0}header p{color:var(--muted);margin:13px 0 0;font-size:14px;line-height:1.5}
+main{max-width:760px;margin:auto;padding:8px 16px 32px}.tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;padding:6px;background:#10172a;border:1px solid var(--line);border-radius:18px;margin-bottom:14px}.tab{border:0;border-radius:13px;background:transparent;color:var(--muted);padding:12px 5px;font-weight:700}.tab.active{background:#293653;color:white}
+.card{background:rgba(20,27,47,.94);border:1px solid var(--line);border-radius:23px;padding:17px;margin:12px 0;box-shadow:0 14px 35px #0002}.langs{display:grid;grid-template-columns:1fr 44px 1fr;align-items:center;gap:8px}.langs label{font-size:10px;letter-spacing:.12em;color:var(--muted);display:block;margin:0 0 7px 3px;font-weight:800}select,textarea,input{width:100%;border:1px solid var(--line);border-radius:13px;background:#0e1527;color:var(--text);padding:12px;font:inherit}select{font-weight:650}.swap{width:42px;height:42px;border-radius:50%;border:1px solid var(--line);background:#202b45;color:white;font-size:19px;margin-top:15px}textarea{resize:vertical;min-height:150px;line-height:1.5;margin-top:12px} .result{white-space:pre-wrap;overflow-wrap:anywhere;min-height:100px;line-height:1.6;font-size:18px}.muted{color:var(--muted);font-size:13px;line-height:1.5}.actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:12px}.btn{border:0;border-radius:14px;padding:13px 16px;font-weight:750;background:linear-gradient(120deg,var(--blue),#9271ff);color:white;min-height:44px}.btn.secondary{background:#202b45;border:1px solid var(--line)}.btn.mint{background:linear-gradient(120deg,#1eae9b,#62e6c5);color:#071b20}.btn:disabled{opacity:.5}.status{font-size:13px;color:var(--mint);min-height:20px;margin-top:9px}.panel{display:none}.panel.active{display:block}.bigmic{width:88px;height:88px;border-radius:50%;font-size:30px;display:block;margin:20px auto}.center{text-align:center}.voiceout{background:#0e1527;border:1px solid var(--line);border-radius:16px;padding:15px;margin-top:12px;min-height:75px;white-space:pre-wrap}.filelabel{display:block;padding:14px;border:1px dashed #566583;border-radius:14px;text-align:center;color:var(--muted);margin-top:12px}footer{max-width:760px;margin:auto;padding:0 20px 30px;color:#8995b0;font-size:12px;line-height:1.6}a{color:#9bb3ff}
+</style>
+</head>
+<body>
+<header><div class="brand"><div class="logo">T</div><div><div class="eyebrow">Speak beyond borders</div><h1>TalkBridge</h1></div></div><p>Clear communication, one conversation at a time. Translate English and French text or use your voice.</p></header>
+<main>
+<nav class="tabs" aria-label="TalkBridge sections"><button class="tab active" data-tab="translate">Translate</button><button class="tab" data-tab="conversation">Conversation</button><button class="tab" data-tab="documents">Documents</button></nav>
+<section class="panel active" id="translate">
+<div class="card"><div class="langs"><div><label for="source">FROM</label><select id="source"><option>English</option><option>French</option></select></div><button class="swap" id="swap" aria-label="Swap languages">⇄</button><div><label for="target">TO</label><select id="target"><option>French</option><option>English</option></select></div></div>
+<textarea id="input" placeholder="Type or paste text here…" aria-label="Text to translate"></textarea><div class="actions"><button class="btn" id="translate">Translate text</button><button class="btn secondary" id="clear">Clear</button></div><div class="status" id="tstatus" role="status"></div></div>
+<div class="card"><div class="eyebrow">TRANSLATION</div><div class="result" id="output">Your translation will appear here.</div><div class="actions"><button class="btn secondary" id="copy">Copy translation</button><button class="btn secondary" id="speak">🔊 Read aloud</button></div></div>
+<p class="muted">Prototype note: translations use the public MyMemory service. Text you submit is sent to that service; do not translate confidential or sensitive information.</p>
+</section>
+<section class="panel" id="conversation">
+<div class="card center"><div class="eyebrow">LIVE CONVERSATION</div><h2>Speak naturally</h2><p class="muted">Allow microphone access. Speech recognition depends on iOS/Safari language support and may require an internet connection.</p>
+<div class="langs"><div><label for="vsource">YOU SPEAK</label><select id="vsource"><option>English</option><option>French</option></select></div><button class="swap" id="vswap" aria-label="Swap languages">⇄</button><div><label for="vtarget">TRANSLATE TO</label><select id="vtarget"><option>French</option><option>English</option></select></div></div>
+<button class="btn mint bigmic" id="listen" aria-label="Start listening">🎙</button><div class="muted" id="vstatus">Tap the microphone to start listening.</div></div>
+<div class="card"><div class="eyebrow">WHAT YOU SAID</div><div class="voiceout" id="heard">Your recognized speech will appear here.</div><div class="eyebrow" style="margin-top:18px">TRANSLATION</div><div class="voiceout result" id="vresult">Your translated speech will appear here.</div><div class="actions"><button class="btn secondary" id="vspeak">🔊 Speak translation</button><button class="btn secondary" id="vcopy">Copy</button></div></div>
+</section>
+<section class="panel" id="documents">
+<div class="card"><div class="eyebrow">DOCUMENT TRANSLATION</div><h2>Bring your text</h2><p class="muted">Paste text from a document or choose a plain-text (.txt) file, then translate it. For PDF files, copy the text from your PDF reader and paste it here.</p>
+<label class="filelabel" for="txtfile">Choose a text file (.txt)</label><input id="txtfile" type="file" accept=".txt,text/plain" hidden>
+<textarea id="docinput" placeholder="Paste document text here…" style="min-height:220px"></textarea>
+<div class="langs" style="margin-top:12px"><div><label for="dsource">FROM</label><select id="dsource"><option>English</option><option>French</option></select></div><button class="swap" id="dswap" aria-label="Swap languages">⇄</button><div><label for="dtarget">TO</label><select id="dtarget"><option>French</option><option>English</option></select></div></div>
+<div class="actions"><button class="btn" id="doctranslate">Translate document</button><button class="btn secondary" id="docdownload">Save result as .txt</button></div><div class="status" id="dstatus" role="status"></div></div>
+<div class="card"><div class="eyebrow">TRANSLATED DOCUMENT</div><div class="result" id="docoutput">Your translated document will appear here.</div></div>
+</section>
+</main>
+<footer>TalkBridge web edition · Internet required for online translation. Translation quality and availability vary by provider. Voice recognition is supplied by the browser/device. This web app is not yet an App Store installation.</footer>
+<script>
+const $=id=>document.getElementById(id);
+document.querySelectorAll('.tab').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('.tab,.panel').forEach(x=>x.classList.remove('active'));b.classList.add('active');$(''+b.dataset.tab).classList.add('active')}));
+function code(x){return x==='English'?'en':'fr'}
+async function translate(text,from,to){if(!text.trim())throw Error('Enter some text first.');const chunks=text.match(/[\s\S]{1,400}/g)||[];let all=[];for(const chunk of chunks){const url=new URL('https://api.mymemory.translated.net/get');url.searchParams.set('q',chunk);url.searchParams.set('langpair',code(from)+'|'+code(to));const r=await fetch(url);if(!r.ok)throw Error('Translation service is unavailable. Try again later.');const j=await r.json();if(j.responseStatus&&j.responseStatus!==200)throw Error('Translation limit reached or provider returned an error.');all.push(j.responseData.translatedText)}return all.join('')}
+$('translate').onclick=async()=>{const b=$('translate');b.disabled=true;$('tstatus').textContent='Translating…';try{$('output').textContent=await translate($('input').value,$('source').value,$('target').value);$('tstatus').textContent='Translation complete.'}catch(e){$('tstatus').textContent=e.message}finally{b.disabled=false}};
+$('swap').onclick=()=>{let a=$('source').value;$('source').value=$('target').value;$('target').value=a;let t=$('input').value;$('input').value=$('output').textContent==='Your translation will appear here.'?'':$('output').textContent;$('output').textContent=t||'Your translation will appear here.'};
+$('clear').onclick=()=>{$('input').value='';$('output').textContent='Your translation will appear here.';$('tstatus').textContent=''};
+$('copy').onclick=async()=>{try{await navigator.clipboard.writeText($('output').textContent);$('tstatus').textContent='Copied.'}catch{$('tstatus').textContent='Select and copy the translation manually.'}};
+function say(text,lang){if(!('speechSynthesis'in window))return;let u=new SpeechSynthesisUtterance(text);u.lang=lang==='English'?'en-US':'fr-FR';speechSynthesis.speak(u)}
+$('speak').onclick=()=>say($('output').textContent,$('target').value);
+$('vswap').onclick=()=>{let a=$('vsource').value;$('vsource').value=$('vtarget').value;$('vtarget').value=a};
+let recognition=null,listening=false;
+$('listen').onclick=()=>{const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){$('vstatus').textContent='Speech recognition is not supported in this browser. Try a recent iOS Safari version.';return}
+if(listening){recognition.stop();return}recognition=new SR();recognition.lang=$('vsource').value==='English'?'en-US':'fr-FR';recognition.interimResults=true;recognition.continuous=false;recognition.onstart=()=>{listening=true;$('listen').textContent='■';$('vstatus').textContent='Listening…'};recognition.onresult=async e=>{let t='';for(let i=e.resultIndex;i<e.results.length;i++)t+=e.results[i][0].transcript;$('heard').textContent=t;if(e.results[e.results.length-1].isFinal){$('vstatus').textContent='Translating speech…';try{$('vresult').textContent=await translate(t,$('vsource').value,$('vtarget').value);$('vstatus').textContent='Done.'}catch(err){$('vstatus').textContent=err.message}}};recognition.onerror=e=>{$('vstatus').textContent='Speech error: '+e.error+'. Check microphone permission and try again.'};recognition.onend=()=>{listening=false;$('listen').textContent='🎙';if($('vstatus').textContent==='Listening…')$('vstatus').textContent='Tap the microphone to speak again.'};recognition.start()};
+$('vspeak').onclick=()=>say($('vresult').textContent,$('vtarget').value);
+$('vcopy').onclick=()=>navigator.clipboard?.writeText($('vresult').textContent);
+$('dswap').onclick=()=>{let a=$('dsource').value;$('dsource').value=$('dtarget').value;$('dtarget').value=a};
+$('txtfile').onchange=async e=>{const f=e.target.files[0];if(f)$('docinput').value=await f.text()};
+$('doctranslate').onclick=async()=>{const b=$('doctranslate');b.disabled=true;$('dstatus').textContent='Translating document…';try{$('docoutput').textContent=await translate($('docinput').value,$('dsource').value,$('dtarget').value);$('dstatus').textContent='Document translated.'}catch(e){$('dstatus').textContent=e.message}finally{b.disabled=false}};
+$('docdownload').onclick=()=>{const blob=new Blob([$('docoutput').textContent],{type:'text/plain;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='TalkBridge-translation.txt';a.click();URL.revokeObjectURL(a.href)};
+if('serviceWorker'in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
+</script></body></html>
