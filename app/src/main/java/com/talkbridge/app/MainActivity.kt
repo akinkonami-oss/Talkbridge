@@ -71,7 +71,7 @@ private fun TalkBridgeApp() {
     val context = LocalContext.current
     val preferences = remember { context.getSharedPreferences("talkbridge_settings", 0) }
     var source by remember { mutableStateOf(preferences.getString("source", "English") ?: "English") }
-    var target by remember { mutableStateOf("Spanish") }
+    var target by remember { mutableStateOf(preferences.getString("target", "French") ?: "French") }
     var input by remember { mutableStateOf("") }
     var translatedPreview by remember { mutableStateOf("") }
     var translationStatus by remember { mutableStateOf("") }
@@ -86,7 +86,7 @@ private fun TalkBridgeApp() {
     var autoTranslate by remember { mutableStateOf(preferences.getBoolean("autoTranslate", true)) }
     var profileName by remember { mutableStateOf("Your profile") }
     var profileBio by remember { mutableStateOf("Here to connect across languages") }
-    val wallpaperPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri -> customWallpaperUri = uri; if (uri != null) wallpaper = "Custom" }
+    val wallpaperPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> customWallpaperUri = uri; if (uri != null) { wallpaper = "Custom"; try { context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) } catch (_: Exception) { } } }
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val messages = remember { mutableStateListOf<ChatLine>() }
@@ -191,7 +191,7 @@ private fun TalkBridgeApp() {
                 }
             ) { padding ->
                 when (selectedTab) {
-                    "Settings" -> SettingsPage(dark, { dark = it }, fontScale, { fontScale = it }, wallpaper, { wallpaper = it }, { wallpaperPicker.launch("image/*") }, autoTranslate, { autoTranslate = it }, fg, card)
+                    "Settings" -> SettingsPage(dark, { dark = it }, fontScale, { fontScale = it }, wallpaper, { wallpaper = it }, { wallpaperPicker.launch(arrayOf("image/*")) }, autoTranslate, { autoTranslate = it }, { preferences.edit().putBoolean("dark", dark).putFloat("fontScale", fontScale).putString("wallpaper", wallpaper).putString("wallpaperUri", customWallpaperUri?.toString()).putBoolean("autoTranslate", autoTranslate).putString("source", source).putString("target", target).apply() }, fg, card)
                     "Profile" -> ProfilePage(profileName, { profileName = it }, profileBio, { profileBio = it }, source, target, fg, card)
                     "Documents" -> DocumentsPage(fg, card)
                     "Live conversation" -> LiveConversationPage(source, target, { languageFor = it; languageSearch = "" }, fg, card)
