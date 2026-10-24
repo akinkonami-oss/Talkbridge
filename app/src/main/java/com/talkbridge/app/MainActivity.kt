@@ -52,7 +52,7 @@ private data class ChatLine(val original: String, val translated: String, val ou
 @Composable
 private fun TalkBridgeApp() {
     var source by remember { mutableStateOf("English") }
-    var target by remember { mutableStateOf("Yoruba") }
+    var target by remember { mutableStateOf("Spanish") }
     var input by remember { mutableStateOf("") }
     var translatedPreview by remember { mutableStateOf("") }
     var translationStatus by remember { mutableStateOf("") }
@@ -225,7 +225,7 @@ private fun TalkBridgeApp() {
                                         Text(message.translated, color = if (message.outgoing) Color.White.copy(alpha = .9f) else fg.copy(alpha = .8f), fontSize = (13 * fontScale).sp)
                                     }
                                     if (message.translated.startsWith("Translation unavailable") || message.translated.contains("not available for on-device translation")) {
-                                        Text("Translation service notice", fontSize = 9.sp, color = Coral, modifier = Modifier.padding(top = 4.dp, horizontal = 6.dp))
+                                        Text("Translation service notice", fontSize = 9.sp, color = Coral, modifier = Modifier.padding(start = 6.dp, top = 4.dp, end = 6.dp))
                                     }
                                 }
                             }
