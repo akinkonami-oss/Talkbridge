@@ -1,6 +1,23 @@
 package com.talkbridge.app
 
+import android.Manifest
+import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Bundle
+import android.speech.RecognitionListener
+import android.speech.RecognizerIntent
+import android.speech.SpeechRecognizer
+import android.speech.tts.TextToSpeech
+import android.net.Uri
+import android.graphics.BitmapFactory
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.foundation.Image
+import androidx.compose.ui.layout.ContentScale
+import java.util.Locale
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
@@ -63,9 +80,12 @@ private fun TalkBridgeApp() {
     var dark by remember { mutableStateOf(false) }
     var fontScale by remember { mutableFloatStateOf(1f) }
     var wallpaper by remember { mutableStateOf("Aurora") }
+    var customWallpaperUri by remember { mutableStateOf<Uri?>(null) }
     var autoTranslate by remember { mutableStateOf(true) }
     var profileName by remember { mutableStateOf("Your profile") }
     var profileBio by remember { mutableStateOf("Here to connect across languages") }
+    val context = LocalContext.current
+    val wallpaperPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri -> customWallpaperUri = uri; if (uri != null) wallpaper = "Custom" }
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val messages = remember { mutableStateListOf<ChatLine>() }
@@ -86,6 +106,7 @@ private fun TalkBridgeApp() {
         }
     }
     val bg = if (dark) Color(0xFF151321) else Paper
+    val wallpaperTint = when (wallpaper) { "Lavender" -> Color(0xFFEAE4FF); "Ocean" -> Color(0xFFDFF7F7); else -> bg }
     val fg = if (dark) Color(0xFFF8F5FF) else Ink
     val card = if (dark) Color(0xFF262238) else Color.White
 
@@ -135,7 +156,7 @@ private fun TalkBridgeApp() {
             }
         ) {
             Scaffold(
-                containerColor = bg,
+                containerColor = wallpaperTint.copy(alpha = if (wallpaper == "Custom") 0f else 1f),
                 topBar = {
                     TopAppBar(
                         title = {
@@ -169,7 +190,7 @@ private fun TalkBridgeApp() {
                 }
             ) { padding ->
                 when (selectedTab) {
-                    "Settings" -> SettingsPage(dark, { dark = it }, fontScale, { fontScale = it }, wallpaper, { wallpaper = it }, autoTranslate, { autoTranslate = it }, fg, card)
+                    "Settings" -> SettingsPage(dark, { dark = it }, fontScale, { fontScale = it }, wallpaper, { wallpaper = it }, { wallpaperPicker.launch("image/*") }, autoTranslate, { autoTranslate = it }, fg, card)
                     "Profile" -> ProfilePage(profileName, { profileName = it }, profileBio, { profileBio = it }, source, target, fg, card)
                     "Documents" -> DocumentsPage(fg, card)
                     "Live conversation" -> LiveConversationPage(source, target, { languageFor = it; languageSearch = "" }, fg, card)
@@ -318,7 +339,7 @@ private fun LanguageButton(language: String, fg: Color, onClick: () -> Unit) {
 }
 
 @Composable
-private fun SettingsPage(dark: Boolean, onDark: (Boolean) -> Unit, scale: Float, onScale: (Float) -> Unit, wallpaper: String, onWallpaper: (String) -> Unit, auto: Boolean, onAuto: (Boolean) -> Unit, fg: Color, card: Color) {
+private fun SettingsPage(dark: Boolean, onDark: (Boolean) -> Unit, scale: Float, onScale: (Float) -> Unit, wallpaper: String, onWallpaper: (String) -> Unit, onChoosePhoto: () -> Unit, auto: Boolean, onAuto: (Boolean) -> Unit, fg: Color, card: Color) {
     Column(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
         Text("Make TalkBridge yours", color = fg, fontSize = 23.sp, fontWeight = FontWeight.ExtraBold)
         Text("Appearance, reading comfort and translation preferences.", color = Color.Gray, fontSize = 13.sp)
@@ -332,11 +353,11 @@ private fun SettingsPage(dark: Boolean, onDark: (Boolean) -> Unit, scale: Float,
             Slider(value = scale, onValueChange = onScale, valueRange = 0.85f..1.35f)
             Text("Wallpaper style", color = fg, fontWeight = FontWeight.SemiBold)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf("Aurora", "Lavender", "Ocean").forEach { choice ->
-                    FilterChip(selected = wallpaper == choice, onClick = { onWallpaper(choice) }, label = { Text(choice) })
+                (listOf("Aurora", "Lavender", "Ocean", "Photo").forEach { choice ->
+                    FilterChip(selected = wallpaper == choice, onClick = { if (choice == "Photo") onChoosePhoto() else onWallpaper(choice) }, label = { Text(choice) })
                 }
             }
-            Text("Photo wallpapers and custom images are planned; they are not enabled in this build.", fontSize = 11.sp, color = Color.Gray)
+            Text("Choose Photo to use an image from your phone. Wallpaper choice applies to the app theme.", fontSize = 11.sp, color = Color.Gray)
         }
         Text("Live voice, translated audio, real-time text translation and cloud messaging still need secure service connections.", color = Color.Gray, fontSize = 12.sp, lineHeight = 18.sp)
     }
@@ -360,24 +381,124 @@ private fun PreferenceSwitch(title: String, subtitle: String, checked: Boolean, 
 
 @Composable
 private fun LiveConversationPage(source: String, target: String, chooseLanguage: (String) -> Unit, fg: Color, card: Color) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var listening by remember { mutableStateOf(false) }
+    var transcript by remember { mutableStateOf("") }
+    var translated by remember { mutableStateOf("") }
+    var status by remember { mutableStateOf("Tap the microphone and speak.") }
+    var busy by remember { mutableStateOf(false) }
+    val speechRecognizer = remember {
+        if (SpeechRecognizer.isRecognitionAvailable(context)) SpeechRecognizer.createSpeechRecognizer(context) else null
+    }
+    val tts = remember { TextToSpeech(context) {} }
+    val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) {
+            val recognizer = speechRecognizer
+            if (recognizer == null) status = "Speech recognition is not available on this device."
+            else {
+                val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                    putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                    putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.forLanguageTag(languageTagFor(source)))
+                    putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
+                    putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
+                }
+                listening = true
+                status = "Listening in $source…"
+                recognizer.setRecognitionListener(object : RecognitionListener {
+                    override fun onReadyForSpeech(params: android.os.Bundle?) { status = "Listening… speak now." }
+                    override fun onBeginningOfSpeech() { status = "Hearing you…" }
+                    override fun onRmsChanged(rmsdB: Float) {}
+                    override fun onBufferReceived(buffer: ByteArray?) {}
+                    override fun onEndOfSpeech() { listening = false; status = "Transcribing…" }
+                    override fun onError(error: Int) { listening = false; status = "Couldn't recognise speech. Tap the microphone and try again." }
+                    override fun onResults(results: android.os.Bundle?) {
+                        listening = false
+                        val words = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull().orEmpty()
+                        transcript = words
+                        if (words.isBlank()) { status = "No speech detected."; return }
+                        scope.launch {
+                            busy = true
+                            try {
+                                translated = TranslationService.translate(words, source, target)
+                                status = "Translated to $target"
+                                val locale = Locale.forLanguageTag(languageTagFor(target))
+                                if (tts.isLanguageAvailable(locale) >= TextToSpeech.LANG_AVAILABLE) tts.language = locale
+                                tts.speak(translated, TextToSpeech.QUEUE_FLUSH, null, "talkbridge-live")
+                            } catch (e: Exception) {
+                                status = e.message ?: "Translation failed. Check your connection and try again."
+                            } finally { busy = false }
+                        }
+                    }
+                    override fun onPartialResults(partialResults: android.os.Bundle?) {
+                        transcript = partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull().orEmpty()
+                    }
+                    override fun onEvent(eventType: Int, params: android.os.Bundle?) {}
+                })
+                recognizer.startListening(intent)
+            }
+        } else status = "Microphone permission is needed for live translation."
+    }
+    DisposableEffect(speechRecognizer, tts) {
+        onDispose {
+            speechRecognizer?.destroy()
+            tts.stop()
+            tts.shutdown()
+        }
+    }
     Column(Modifier.fillMaxSize().padding(18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        Text("Speak to each other naturally.", fontSize = 24.sp, color = fg, fontWeight = FontWeight.ExtraBold)
-        Text("A two-person conversation mode: each person gets their own language, transcript and translated reply.", color = Color.Gray, fontSize = 13.sp, lineHeight = 19.sp)
+        Text("Live voice translation", fontSize = 24.sp, color = fg, fontWeight = FontWeight.ExtraBold)
+        Text("Speak in one language, translate it, and hear the result aloud.", color = Color.Gray, fontSize = 13.sp, lineHeight = 19.sp)
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
             LanguageButton(source, fg) { chooseLanguage("source") }
             Icon(Icons.Default.SwapHoriz, contentDescription = null, tint = Violet)
             LanguageButton(target, fg) { chooseLanguage("target") }
         }
-        ConversationSide("PERSON A · $source", "You speak $source", Violet, card, fg)
-        ConversationSide("PERSON B · $target", "They speak $target", Teal, card, fg)
+        Column(Modifier.fillMaxWidth().background(card, RoundedCornerShape(22.dp)).padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("YOU · $source", color = Violet, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+            Text(transcript.ifBlank { "Your speech transcript will appear here." }, color = fg, fontSize = 16.sp)
+        }
+        Column(Modifier.fillMaxWidth().background(card, RoundedCornerShape(22.dp)).padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("TRANSLATION · $target", color = Teal, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+            Text(translated.ifBlank { "Your translated words will appear here." }, color = fg, fontSize = 16.sp)
+        }
+        Text(status, color = Violet, fontSize = 12.sp)
         Spacer(Modifier.weight(1f))
-        Button(onClick = {}, enabled = false, modifier = Modifier.fillMaxWidth().height(54.dp), shape = RoundedCornerShape(18.dp)) {
+        Button(
+            onClick = {
+                if (listening) { speechRecognizer?.stopListening(); listening = false; status = "Stopped listening." }
+                else if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+                    permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                } else permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+            },
+            enabled = !busy,
+            modifier = Modifier.fillMaxWidth().height(56.dp),
+            shape = RoundedCornerShape(20.dp)
+        ) {
             Icon(Icons.Default.Mic, contentDescription = null)
             Spacer(Modifier.width(8.dp))
-            Text("Live microphone translation — coming next")
+            Text(if (listening) "Stop listening" else if (busy) "Translating…" else "Start microphone")
         }
-        Text("This screen is the interface preview. Microphone capture, speech recognition and translated audio are not connected yet.", color = Color.Gray, fontSize = 11.sp, lineHeight = 16.sp)
+        Text("Live speech recognition needs a speech service on your device. Translation models may need to download once; later translations should be faster.", color = Color.Gray, fontSize = 11.sp, lineHeight = 16.sp)
     }
+}
+
+private fun languageTagFor(name: String): String = when (name) {
+    "Chinese" -> "zh-CN"
+    "English" -> "en-US"
+    "Arabic" -> "ar"
+    "Dutch" -> "nl"
+    "French" -> "fr"
+    "German" -> "de"
+    "Hindi" -> "hi"
+    "Italian" -> "it"
+    "Japanese" -> "ja"
+    "Korean" -> "ko"
+    "Portuguese" -> "pt"
+    "Russian" -> "ru"
+    "Spanish" -> "es"
+    "Turkish" -> "tr"
+    else -> "en-US"
 }
 
 @Composable
