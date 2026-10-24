@@ -13,6 +13,7 @@ settings:
     INFOPLIST_KEY_NSPhotoLibraryUsageDescription: "Choose a photo to personalize your TalkBridge background."
     INFOPLIST_KEY_NSSpeechRecognitionUsageDescription: "TalkBridge uses speech recognition to translate spoken English and French."
     INFOPLIST_KEY_NSMicrophoneUsageDescription: "TalkBridge uses the microphone for spoken translation."
+    INFOPLIST_KEY_NSSpeechRecognitionUsageDescription: "TalkBridge converts spoken English or French into text for translation."
 targets:
   TalkBridge:
     type: application
