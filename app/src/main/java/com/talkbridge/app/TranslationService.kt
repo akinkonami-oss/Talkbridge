@@ -19,6 +19,7 @@ import kotlin.coroutines.resumeWithException
  */
 object TranslationService {
     private val translators = ConcurrentHashMap<String, Translator>()
+    private val translationCache = ConcurrentHashMap<String, String>()
     private val readyPairs = ConcurrentHashMap.newKeySet<String>()
     private val pairLocks = ConcurrentHashMap<String, Mutex>()
 
@@ -49,6 +50,8 @@ object TranslationService {
             ?: throw UnsupportedOperationException("$targetName is not available for on-device translation. A secure cloud translation service is needed.")
         if (source == target) return text
 
+        val cacheKey = sourceName + "->" + targetName + ":" + text.trim()
+        translationCache[cacheKey]?.let { return it }
         val pairKey = "$source->$target"
         val translator = translators.computeIfAbsent(pairKey) {
             Translation.getClient(
@@ -66,7 +69,10 @@ object TranslationService {
                 }
             }
         }
-        return translator.translate(text).awaitTask()
+        val result = translator.translate(text).awaitTask()
+        if (translationCache.size > 500) translationCache.clear()
+        translationCache[cacheKey] = result
+        return result
     }
 
     private suspend fun <T> com.google.android.gms.tasks.Task<T>.awaitTask(): T =
