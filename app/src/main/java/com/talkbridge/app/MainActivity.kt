@@ -29,6 +29,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 
 private val Ink = Color(0xFF211B3D)
 private val Violet = Color(0xFF6957E8)
@@ -53,6 +54,9 @@ private fun TalkBridgeApp() {
     var source by remember { mutableStateOf("English") }
     var target by remember { mutableStateOf("Yoruba") }
     var input by remember { mutableStateOf("") }
+    var translatedPreview by remember { mutableStateOf("") }
+    var translationStatus by remember { mutableStateOf("") }
+    var isTranslating by remember { mutableStateOf(false) }
     var languageFor by remember { mutableStateOf("") }
     var languageSearch by remember { mutableStateOf("") }
     var selectedTab by remember { mutableStateOf("Chats") }
@@ -69,6 +73,22 @@ private fun TalkBridgeApp() {
             ChatLine("Good morning! How are you?", "Ẹ káàárọ̀! Báwo ni ẹ ṣe wà?", true),
             ChatLine("Mo wà dáadáa, ẹ ṣé. Báwo ni ẹ?", "I’m fine, thank you. How are you?", false)
         )
+    }
+    LaunchedEffect(input, source, target, autoTranslate) {
+        translatedPreview = ""
+        translationStatus = ""
+        if (input.isNotBlank() && autoTranslate) {
+            delay(450)
+            isTranslating = true
+            try {
+                translatedPreview = TranslationService.translate(input.trim(), source, target)
+                translationStatus = "On-device translation preview"
+            } catch (e: Exception) {
+                translationStatus = e.message ?: "Translation unavailable. Check your connection and try again."
+            } finally {
+                isTranslating = false
+            }
+        }
     }
     val bg = if (dark) Color(0xFF151321) else Paper
     val fg = if (dark) Color(0xFFF8F5FF) else Ink
@@ -209,7 +229,9 @@ private fun TalkBridgeApp() {
                                         Spacer(Modifier.height(8.dp))
                                         Text(message.translated, color = if (message.outgoing) Color.White.copy(alpha = .9f) else fg.copy(alpha = .8f), fontSize = (13 * fontScale).sp)
                                     }
-                                    Text("Sample translation · not connected to live service", fontSize = 9.sp, color = Color.Gray, modifier = Modifier.padding(top = 4.dp, horizontal = 6.dp))
+                                    if (message.translated.startsWith("Translation unavailable") || message.translated.contains("not available for on-device translation")) {
+                                        Text("Translation service notice", fontSize = 9.sp, color = Coral, modifier = Modifier.padding(top = 4.dp, horizontal = 6.dp))
+                                    }
                                 }
                             }
                         }
@@ -223,7 +245,13 @@ private fun TalkBridgeApp() {
                                 maxLines = 3
                             )
                             if (input.isNotBlank() && autoTranslate) {
-                                Text("Live translation preview will appear here when a translation service is connected.", color = Violet, fontSize = 10.sp, modifier = Modifier.padding(start = 12.dp, top = 5.dp))
+                                Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp)) {
+                                    Text(if (isTranslating) "Translating…" else translationStatus, color = Violet, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
+                                    if (translatedPreview.isNotBlank()) {
+                                        Spacer(Modifier.height(4.dp))
+                                        Text(translatedPreview, color = fg, fontSize = 13.sp)
+                                    }
+                                }
                             }
                             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                                 IconButton(onClick = { selectedTab = "Live conversation" }) { Icon(Icons.Default.Mic, contentDescription = "Open live conversation", tint = Violet) }
@@ -233,11 +261,18 @@ private fun TalkBridgeApp() {
                                     onClick = {
                                         val text = input.trim()
                                         if (text.isNotEmpty()) {
-                                            messages.add(ChatLine(text, "Translation service not connected yet.", true))
-                                            input = ""
+                                            scope.launch {
+                                                val result = try {
+                                                    TranslationService.translate(text, source, target)
+                                                } catch (e: Exception) {
+                                                    e.message ?: "Translation unavailable. Please try another language pair."
+                                                }
+                                                messages.add(ChatLine(text, result, true))
+                                                input = ""
+                                            }
                                         }
                                     },
-                                    enabled = input.isNotBlank(),
+                                    enabled = input.isNotBlank() && !isTranslating,
                                     shape = RoundedCornerShape(16.dp),
                                     contentPadding = PaddingValues(horizontal = 18.dp, vertical = 11.dp)
                                 ) {
