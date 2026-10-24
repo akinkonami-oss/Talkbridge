@@ -5,7 +5,10 @@ import com.google.mlkit.nl.translate.Translation
 import com.google.mlkit.nl.translate.Translator
 import com.google.mlkit.nl.translate.TranslatorOptions
 import com.google.mlkit.nl.translate.TranslateLanguage
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.suspendCancellableCoroutine
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
@@ -15,6 +18,10 @@ import kotlin.coroutines.resumeWithException
  * languages such as Yoruba, Igbo and Hausa require a separate cloud provider.
  */
 object TranslationService {
+    private val translators = ConcurrentHashMap<String, Translator>()
+    private val readyPairs = ConcurrentHashMap.newKeySet<String>()
+    private val pairLocks = ConcurrentHashMap<String, Mutex>()
+
     private val codeByName = mapOf(
         "English" to TranslateLanguage.ENGLISH,
         "Arabic" to TranslateLanguage.ARABIC,
@@ -42,15 +49,24 @@ object TranslationService {
             ?: throw UnsupportedOperationException("$targetName is not available for on-device translation. A secure cloud translation service is needed.")
         if (source == target) return text
 
-        val translator: Translator = Translation.getClient(
-            TranslatorOptions.Builder().setSourceLanguage(source).setTargetLanguage(target).build()
-        )
-        try {
-            translator.downloadModelIfNeeded(DownloadConditions.Builder().build()).awaitTask()
-            return translator.translate(text).awaitTask()
-        } finally {
-            translator.close()
+        val pairKey = "$source->$target"
+        val translator = translators.computeIfAbsent(pairKey) {
+            Translation.getClient(
+                TranslatorOptions.Builder().setSourceLanguage(source).setTargetLanguage(target).build()
+            )
         }
+
+        // Keep the translator and downloaded model warm between keystrokes/messages.
+        // A per-language-pair mutex prevents duplicate first-time downloads.
+        if (!readyPairs.contains(pairKey)) {
+            pairLocks.computeIfAbsent(pairKey) { Mutex() }.withLock {
+                if (!readyPairs.contains(pairKey)) {
+                    translator.downloadModelIfNeeded(DownloadConditions.Builder().build()).awaitTask()
+                    readyPairs.add(pairKey)
+                }
+            }
+        }
+        return translator.translate(text).awaitTask()
     }
 
     private suspend fun <T> com.google.android.gms.tasks.Task<T>.awaitTask(): T =
