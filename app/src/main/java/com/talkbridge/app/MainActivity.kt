@@ -68,7 +68,9 @@ private data class ChatLine(val original: String, val translated: String, val ou
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun TalkBridgeApp() {
-    var source by remember { mutableStateOf("English") }
+    val context = LocalContext.current
+    val preferences = remember { context.getSharedPreferences("talkbridge_settings", 0) }
+    var source by remember { mutableStateOf(preferences.getString("source", "English") ?: "English") }
     var target by remember { mutableStateOf("Spanish") }
     var input by remember { mutableStateOf("") }
     var translatedPreview by remember { mutableStateOf("") }
@@ -77,14 +79,13 @@ private fun TalkBridgeApp() {
     var languageFor by remember { mutableStateOf("") }
     var languageSearch by remember { mutableStateOf("") }
     var selectedTab by remember { mutableStateOf("Chats") }
-    var dark by remember { mutableStateOf(false) }
-    var fontScale by remember { mutableFloatStateOf(1f) }
-    var wallpaper by remember { mutableStateOf("Aurora") }
-    var customWallpaperUri by remember { mutableStateOf<Uri?>(null) }
-    var autoTranslate by remember { mutableStateOf(true) }
+    var dark by remember { mutableStateOf(preferences.getBoolean("dark", false)) }
+    var fontScale by remember { mutableFloatStateOf(preferences.getFloat("fontScale", 1f)) }
+    var wallpaper by remember { mutableStateOf(preferences.getString("wallpaper", "Aurora") ?: "Aurora") }
+    var customWallpaperUri by remember { mutableStateOf(preferences.getString("wallpaperUri", null)?.let { Uri.parse(it) }) }
+    var autoTranslate by remember { mutableStateOf(preferences.getBoolean("autoTranslate", true)) }
     var profileName by remember { mutableStateOf("Your profile") }
     var profileBio by remember { mutableStateOf("Here to connect across languages") }
-    val context = LocalContext.current
     val wallpaperPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri -> customWallpaperUri = uri; if (uri != null) wallpaper = "Custom" }
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
@@ -339,7 +340,7 @@ private fun LanguageButton(language: String, fg: Color, onClick: () -> Unit) {
 }
 
 @Composable
-private fun SettingsPage(dark: Boolean, onDark: (Boolean) -> Unit, scale: Float, onScale: (Float) -> Unit, wallpaper: String, onWallpaper: (String) -> Unit, onChoosePhoto: () -> Unit, auto: Boolean, onAuto: (Boolean) -> Unit, fg: Color, card: Color) {
+private fun SettingsPage(dark: Boolean, onDark: (Boolean) -> Unit, scale: Float, onScale: (Float) -> Unit, wallpaper: String, onWallpaper: (String) -> Unit, onChoosePhoto: () -> Unit, auto: Boolean, onAuto: (Boolean) -> Unit, onSave: () -> Unit, fg: Color, card: Color) {
     Column(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
         Text("Make TalkBridge yours", color = fg, fontSize = 23.sp, fontWeight = FontWeight.ExtraBold)
         Text("Appearance, reading comfort and translation preferences.", color = Color.Gray, fontSize = 13.sp)
