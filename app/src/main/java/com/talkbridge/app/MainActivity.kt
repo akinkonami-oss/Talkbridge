@@ -37,7 +37,7 @@ private val Indigo = Color(0xFF33245D)
 private val Teal = Color(0xFF36CDB6)
 private val Coral = Color(0xFFFF819B)
 private val Paper = Color(0xFFF7F4FF)
-private val languages = listOf("English", "Yoruba", "Igbo", "Hausa", "French", "Spanish", "Arabic", "Chinese", "Portuguese", "German", "Swahili", "Italian", "Japanese", "Korean", "Turkish", "Hindi", "Dutch", "Russian")
+private val languages = listOf("Arabic", "Chinese", "Dutch", "English", "French", "German", "Hindi", "Italian", "Japanese", "Korean", "Portuguese", "Russian", "Spanish", "Turkish")
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -68,12 +68,7 @@ private fun TalkBridgeApp() {
     var profileBio by remember { mutableStateOf("Here to connect across languages") }
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
-    val messages = remember {
-        mutableStateListOf(
-            ChatLine("Good morning! How are you?", "Ẹ káàárọ̀! Báwo ni ẹ ṣe wà?", true),
-            ChatLine("Mo wà dáadáa, ẹ ṣé. Báwo ni ẹ?", "I’m fine, thank you. How are you?", false)
-        )
-    }
+    val messages = remember { mutableStateListOf<ChatLine>() }
     LaunchedEffect(input, source, target, autoTranslate) {
         translatedPreview = ""
         translationStatus = ""
@@ -209,7 +204,7 @@ private fun TalkBridgeApp() {
                                         Spacer(Modifier.height(5.dp))
                                         Text("Both people can speak or type in their own language. Messages are designed to show the original and its translation together.", color = Color.White.copy(alpha = .86f), fontSize = 12.sp, lineHeight = 18.sp)
                                         Spacer(Modifier.height(12.dp))
-                                        Text("SAMPLE CONVERSATION", color = Color.White.copy(alpha = .75f), fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
+                                        Text("ON-DEVICE TRANSLATION", color = Color.White.copy(alpha = .75f), fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
                                     }
                                 }
                             }
@@ -290,7 +285,7 @@ private fun TalkBridgeApp() {
     if (languageFor.isNotEmpty()) {
         AlertDialog(
             onDismissRequest = { languageFor = "" },
-            title = { Text("Choose language") },
+            title = { Text("Choose a supported language") },
             text = {
                 Column(Modifier.heightIn(max = 420.dp)) {
                     OutlinedTextField(value = languageSearch, onValueChange = { languageSearch = it }, modifier = Modifier.fillMaxWidth(), placeholder = { Text("Search languages") }, singleLine = true)
