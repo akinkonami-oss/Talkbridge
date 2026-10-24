@@ -44,8 +44,8 @@ struct ContentView: View {
                 Group {
                     switch section {
                     case .translator: translatorPage
-                    case .conversation: conversationPage
-                    case .documents: documentsPage
+                    case .conversation: ConversationView()
+                    case .documents: DocumentsView()
                     case .settings: settingsPage
                     }
                 }
