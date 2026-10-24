@@ -353,7 +353,7 @@ private fun SettingsPage(dark: Boolean, onDark: (Boolean) -> Unit, scale: Float,
             Slider(value = scale, onValueChange = onScale, valueRange = 0.85f..1.35f)
             Text("Wallpaper style", color = fg, fontWeight = FontWeight.SemiBold)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                (listOf("Aurora", "Lavender", "Ocean", "Photo").forEach { choice ->
+                listOf("Aurora", "Lavender", "Ocean", "Photo").forEach { choice ->
                     FilterChip(selected = wallpaper == choice, onClick = { if (choice == "Photo") onChoosePhoto() else onWallpaper(choice) }, label = { Text(choice) })
                 }
             }
